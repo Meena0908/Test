@@ -1,8 +1,9 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
 import HorSlider from "./HorSlider";
+import { TOP_BRAND_ITEMS } from "./GenInfo";
 
-const ShopBy = ({ filter, title }) => {
+const BestSellersTopBrands = () => {
   const [products, setProducts] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -11,11 +12,28 @@ const ShopBy = ({ filter, title }) => {
     let isMounted = true;
     const fetchData = async () => {
       try {
-        const res = await axios.get(
-          `${import.meta.env.VITE_BASE_URL}/api/filter/${filter}`
+        const base = import.meta.env.VITE_BASE_URL;
+        const responses = await Promise.all(
+          TOP_BRAND_ITEMS.map((b) =>
+            axios.get(
+              `${base}/api/products/search?q=${encodeURIComponent(b.searchQuery)}`
+            )
+          )
         );
+        const seen = new Set();
+        const merged = [];
+        for (const res of responses) {
+          const list = Array.isArray(res.data) ? res.data : [];
+          for (const p of list) {
+            const id = p._id ?? p.id;
+            if (id && !seen.has(String(id))) {
+              seen.add(String(id));
+              merged.push(p);
+            }
+          }
+        }
         if (isMounted) {
-          setProducts(res.data);
+          setProducts(merged);
           setLoading(false);
         }
       } catch (err) {
@@ -34,17 +52,16 @@ const ShopBy = ({ filter, title }) => {
 
   return (
     <>
-      <div className="mt-10 mb-2 text-2xl">{title}</div>
+      <div className="mt-10 mb-2 text-2xl">Best Sellers</div>
       <div className="overflow-x-auto overflow-y-hidden md:max-w-full scroll-container mb-10 mx-auto relative scroll-container">
         {loading && <p>Loading...</p>}
         {error && <p>Error while fetching: {error.message}</p>}
 
         <div className="flex flex-nowrap space-x-4">
-          {/* Ensure products is always an array */}
           {(Array.isArray(products) ? products : []).map((elem) => (
             <HorSlider
               product={elem}
-              key={elem._id || elem.id} // fallback if _id is missing
+              key={elem._id || elem.id}
               className="inline-block"
               home={true}
             />
@@ -55,4 +72,4 @@ const ShopBy = ({ filter, title }) => {
   );
 };
 
-export default ShopBy;
+export default BestSellersTopBrands;
